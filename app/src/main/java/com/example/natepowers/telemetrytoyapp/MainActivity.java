@@ -1,15 +1,22 @@
 package com.example.natepowers.telemetrytoyapp;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -22,13 +29,41 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.WebSocket;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LocationListener {
 
     private static final String TAG = "MainActivity";
 
     private Button start;
     TextView output;
     OkHttpClient client;
+
+    double lat, lng;
+
+
+    @Override
+    public void onLocationChanged(Location location) {
+        lat = location.getLatitude();
+        lng = location.getLongitude();
+        Toast.makeText(this, "lat " + lat + ", lng " + lng, Toast.LENGTH_SHORT).show();
+        Log.e(TAG, "onLocationChanged: lat " + lat + ", lng " + lng);
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+        Log.d("Latitude", "disable");
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+        Log.d("Latitude", "enable");
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        Log.d("Latitude", "status");
+    }
+
+    protected LocationManager locationManager;
 
     private final class WebSocketListener extends okhttp3.WebSocketListener {
         public static final int NORMAL_CLOSE_STATUS = 1000;
@@ -68,10 +103,10 @@ public class MainActivity extends AppCompatActivity {
                                 "\t\"ts\":\"" + ts + "\"\n" +
                                 "}");
 
-                        Log.e(TAG, "run: UUID: " + id );
-                        Log.e(TAG, "run: timestamp: " + ts );
-                        Log.e(TAG, "run: battery: " + getBatteryPercentage(getApplicationContext()) );
-                        Log.e("", "\n\n" );
+                        Log.e(TAG, "run: UUID: " + id);
+                        Log.e(TAG, "run: timestamp: " + ts);
+                        Log.e(TAG, "run: battery: " + getBatteryPercentage(getApplicationContext()));
+                        Log.e("", "\n\n");
                     }
 
                     // todo change timeout based on battery, internet, etc
@@ -86,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onMessage(WebSocket webSocket, String text) {
             output("Receiving bytes: " + text);
-            Log.e(TAG, "onMessage: " + text );
+            Log.e(TAG, "onMessage: " + text);
 
         }
 
@@ -102,6 +137,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
+    int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 100;
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -110,6 +148,37 @@ public class MainActivity extends AppCompatActivity {
         start = (Button) findViewById(R.id.start);
         output = (TextView) findViewById(R.id.output);
         client = new OkHttpClient();
+
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(MainActivity.this,
+                    Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+
+                // Should we show an explanation?
+                if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
+                        Manifest.permission.ACCESS_FINE_LOCATION)) {
+
+                    // Show an explanation to the user *asynchronously* -- don't block
+                    // this thread waiting for the user's response! After the user
+                    // sees the explanation, try again to request the permission.
+
+                } else {
+
+                    // No explanation needed, we can request the permission.
+
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{Manifest.permission.READ_CONTACTS},
+                            MY_PERMISSIONS_REQUEST_READ_CONTACTS);
+
+                    // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                    // app-defined int constant. The callback method gets the
+                    // result of the request.
+                }
+            }
+        }
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+
 
         start.setOnClickListener(new View.OnClickListener() {
             @Override

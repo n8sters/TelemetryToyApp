@@ -3,9 +3,18 @@ package com.example.natepowers.telemetrytoyapp;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.location.Location;
+import android.location.LocationListener;
 import android.os.BatteryManager;
+import android.os.Bundle;
+import android.os.PersistableBundle;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 
 import java.util.UUID;
 
@@ -19,7 +28,7 @@ import java.util.UUID;
  * ~~~~~~~~~~~~~~~~~~~  at Copia PBC   ~~~~~~~~~~~~~~~~~~~~~~
  */
 
-public class TelemtryMethods extends AppCompatActivity {
+public class TelemtryMethods extends AppCompatActivity implements SensorEventListener {
 
     private static final String TAG = "TelemtryMethods";
 
@@ -33,6 +42,12 @@ public class TelemtryMethods extends AppCompatActivity {
 
     }
 
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState, @Nullable PersistableBundle persistentState) {
+        super.onCreate(savedInstanceState, persistentState);
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+    }
+
     // generate a time stamp
     String createTimeStamp() {
         Long tsLong = System.currentTimeMillis()/1000;
@@ -40,14 +55,51 @@ public class TelemtryMethods extends AppCompatActivity {
         return ts;
     }
 
+    private final LocationListener mLocationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(final Location location) {
+            //your code here
+        }
 
-    public void loadBatteryInfo( ) {
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(Intent.ACTION_POWER_CONNECTED);
-        filter.addAction(Intent.ACTION_POWER_DISCONNECTED);
-        filter.addAction(Intent.ACTION_BATTERY_CHANGED);
+        @Override
+        public void onStatusChanged(String s, int i, Bundle bundle) {
 
-        registerReceiver(batteryInfoReceiver, filter);
+        }
+
+        @Override
+        public void onProviderEnabled(String s) {
+
+        }
+
+        @Override
+        public void onProviderDisabled(String s) {
+
+        }
+
+
+    };
+
+    // get accuracy
+    public String getAccuracy(Location location) {
+        float i = location.getAccuracy();
+        return String.valueOf(i);
+    }
+
+    // gets the altitude if the option exists, otherwise returns -1
+    public String getAltutude(Location location) {
+        if ( location.hasAltitude() ) {
+            return String.valueOf(location.getAltitude());
+        } else {
+            return "-1";
+        }
+    }
+
+    public String getLat ( Location location ) {
+        return String.valueOf(location.getLatitude());
+    }
+
+    public String getLng(Location location) {
+        return String.valueOf(location.getLongitude());
     }
 
     private void updateBatteryData(Intent intent ) {
@@ -62,11 +114,54 @@ public class TelemtryMethods extends AppCompatActivity {
         }
     }
 
+
     private BroadcastReceiver batteryInfoReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             updateBatteryData(intent);
         }
     };
+
+    // device sensor manager
+    private SensorManager mSensorManager;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // for the system's orientation sensor registered listeners
+        mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),
+                SensorManager.SENSOR_DELAY_GAME);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        // to stop the listener and save battery
+        mSensorManager.unregisterListener(this);
+    }
+
+    float course;
+
+    public String getHeading(SensorEvent event) {
+        float degree = Math.round(event.values[0]);
+        return Float.toString(degree);
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+
+        // get the angle around the z-axis rotated
+        float degree = Math.round(event.values[0]);
+
+        Log.e(TAG, "onSensorChanged: " +  Float.toString(degree) + " degrees" );
+
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // not in use
+    }
 
 }
