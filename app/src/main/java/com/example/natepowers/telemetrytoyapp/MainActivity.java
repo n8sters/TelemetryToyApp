@@ -6,6 +6,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
@@ -29,7 +32,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.WebSocket;
 
-public class MainActivity extends AppCompatActivity implements LocationListener {
+public class MainActivity extends AppCompatActivity implements LocationListener, SensorEventListener {
 
     private static final String TAG = "MainActivity";
 
@@ -37,12 +40,13 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     TextView output;
     OkHttpClient client;
     String alt;
-    double lat, lng;
+    double lat, lng, acc, course;
+
 
 
     @Override
     public void onLocationChanged(Location location) {
-        Log.e(TAG, "onLocationChanged: lat " + lat + ", lng " + lng);
+        //Log.e(TAG, "onLocationChanged: lat " + lat + ", lng " + lng);
     }
 
     @Override
@@ -62,6 +66,18 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
     protected LocationManager locationManager;
 
+    @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        // get the angle around the z-axis rotated
+        course = Math.round(sensorEvent.values[0]);
+        Log.e(TAG, "onSensorChanged: course: " + course );
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
+    }
+
     private final class WebSocketListener extends okhttp3.WebSocketListener {
         public static final int NORMAL_CLOSE_STATUS = 1000;
 
@@ -72,7 +88,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
             // set up runnable handler
             Handler handler1 = new Handler(Looper.getMainLooper());
 
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 100000; i++) {
                 // set timeout thread
                 handler1.postDelayed(new Runnable() {
                     @Override
@@ -90,11 +106,11 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                                 "\t\t\t{\n" +
                                 "\t\t\t\t\"lat\": " + lat + ",\n" +
                                 "\t\t\t\t\"lng\": " + lng + ",\n" +
-                                "\t\t\t\t\"hAcc\": 1.1,\n" +
+                                "\t\t\t\t\"hAcc\": " + acc + ",\n" +
                                 "\t\t\t\t\"alt\": " + alt + ",\n" +
-                                "\t\t\t\t\"vAcc\": 1.1,\n" +
+                                "\t\t\t\t\"vAcc\": -1,\n" + // currently set to -1
                                 "\t\t\t\t\"speed\": 1.1,\n" +
-                                "\t\t\t\t\"course\": 1.1,\n" +
+                                "\t\t\t\t\"course\": " + course + ",\n" +
                                 "\t\t\t\t\"batt\": " + battery + ",\n" +
                                 "\t\t\t\t\"ts\": " + ts + "\n" +
                                 "\t\t\t}\n" +
@@ -107,12 +123,13 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                         Log.e(TAG, "run: UUID: " + id);
                         Log.e(TAG, "run: timestamp: " + ts);
                         Log.e(TAG, "run: alt: " + alt );
+                        Log.e(TAG, "run: course:  " + course );
                         Log.e(TAG, "run: battery: " + getBatteryPercentage(getApplicationContext()));
                         Log.e("", "\n\n");
                     }
 
                     // todo change timeout based on battery, internet, etc
-                }, 1000 * i); // currently set to 1 second
+                }, 2000 * i); // currently set to 1 second
 
             }
 
@@ -183,6 +200,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         lat = (location.getLatitude());
         lng = (location.getLongitude());
         alt = tel.getAltutude(location);
+        acc = tel.getAccuracy(location);
 
         Log.e(TAG, "onCreate: bearing: " + location.getBearing() );
         Log.e(TAG, "doAThing: acc: " + tel.getAccuracy(location) );
@@ -215,6 +233,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
         registerReceiver(batteryInfoReceiver, filter);
     }
+
 
     private void updateBatteryData(Intent intent) {
         boolean present = intent.getBooleanExtra(BatteryManager.EXTRA_PRESENT, false);

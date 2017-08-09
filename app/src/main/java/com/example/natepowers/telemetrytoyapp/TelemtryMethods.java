@@ -80,9 +80,9 @@ public class TelemtryMethods extends AppCompatActivity implements SensorEventLis
     };
 
     // get accuracy
-    public String getAccuracy(Location location) {
+    public double getAccuracy(Location location) {
         float i = location.getAccuracy();
-        return String.valueOf(i);
+        return i;
     }
 
     // gets the altitude if the option exists, otherwise returns -1
