@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -14,6 +15,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -145,16 +147,105 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(batteryInfoReceiver, filter);
     }
 
-    private void updateBatteryData(Intent intent ) {
+    private void updateBatteryData(Intent intent) {
         boolean present = intent.getBooleanExtra(BatteryManager.EXTRA_PRESENT, false);
 
-        if ( present ) {
-            StringBuilder batteryInfo = new StringBuilder();
-            int health = intent.getIntExtra(BatteryManager.EXTRA_HEALTH, 0);
-            batteryInfo.append("Health: " + health).append("\n");
-        } else {
+        if (present) {
 
+            // Calculate Battery Pourcentage ...
+            int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+
+            if (level != -1 && scale != -1) {
+                int batteryPct = (int) ((level / (float) scale) * 100f);
+                //batteryPctTv.setText("Battery Pct : " + batteryPct + " %"));
+            }
+
+            int plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+            int pluggedLbl = R.string.battery_plugged_none;
+
+            switch (plugged) {
+                case BatteryManager.BATTERY_PLUGGED_WIRELESS:
+                    pluggedLbl = R.string.battery_plugged_wireless;
+                    break;
+
+                case BatteryManager.BATTERY_PLUGGED_USB:
+                    pluggedLbl = R.string.battery_plugged_usb;
+                    break;
+
+                case BatteryManager.BATTERY_PLUGGED_AC:
+                    pluggedLbl = R.string.battery_plugged_ac;
+                    break;
+
+                default:
+                    pluggedLbl = R.string.battery_plugged_none;
+                    break;
+            }
+
+            // display plugged status ...
+            //pluggedTv.setText("Plugged : " + getString(pluggedLbl));
+
+            int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+            int statusLbl = R.string.battery_status_discharging;
+
+            switch (status) {
+                case BatteryManager.BATTERY_STATUS_CHARGING:
+                    statusLbl = R.string.battery_status_charging;
+                    break;
+
+                case BatteryManager.BATTERY_STATUS_DISCHARGING:
+                    statusLbl = R.string.battery_status_discharging;
+                    break;
+
+                case BatteryManager.BATTERY_STATUS_FULL:
+                    statusLbl = R.string.battery_status_full;
+                    break;
+
+                case BatteryManager.BATTERY_STATUS_UNKNOWN:
+                    statusLbl = -1;
+                    break;
+
+                case BatteryManager.BATTERY_STATUS_NOT_CHARGING:
+                default:
+                    statusLbl = R.string.battery_status_discharging;
+                    break;
+            }
+
+            if (statusLbl != -1) {
+                //chargingStatusTv.setText("Battery Charging Status : " + getString(statusLbl));
+            }
+
+            if (intent.getExtras() != null) {
+                String technology = intent.getExtras().getString(BatteryManager.EXTRA_TECHNOLOGY);
+
+                if (!"".equals(technology)) {
+                    //technologyTv.setText("Technology : " + technology);
+                }
+            }
+
+            int temperature = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0);
+
+            if (temperature > 0) {
+                float temp = ((float) temperature) / 10f;
+                //tempTv.setText("Temperature : " + temp + "°C);
+            }
+
+            int voltage = intent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0);
+
+            if (voltage > 0) {
+                //voltageTv.setText("Voltage : " + voltage + " mV);
+            }
+
+            long capacity = getBatteryCapacity(this);
+
+            if (capacity > 0) {
+                //capacityTv.setText("Capacity : " + capacity + " mAh");
+            }
+
+        } else {
+            Toast.makeText(this, "No Battery present", Toast.LENGTH_SHORT).show();
         }
+
     }
 
     private BroadcastReceiver batteryInfoReceiver = new BroadcastReceiver() {
@@ -163,6 +254,21 @@ public class MainActivity extends AppCompatActivity {
             updateBatteryData(intent);
         }
     };
+
+    public long getBatteryCapacity(Context ctx) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            BatteryManager mBatteryManager = (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
+            Long chargeCounter = mBatteryManager.getLongProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);
+            Long capacity = mBatteryManager.getLongProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+
+            if (chargeCounter != null && capacity != null) {
+                long value = (long) (((float) chargeCounter / (float) capacity) * 100f);
+                return value;
+            }
+        }
+
+        return 0;
+    }
 
     // simple battery percentage
     public static float getBatteryPercentage(Context context) {

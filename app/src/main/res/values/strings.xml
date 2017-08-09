@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">TelemetryToyApp</string>
+    <string name="battery_status_discharging">discharging:</string>
+    <string name="battery_status_charging">charging:</string>
+    <string name="battery_status_full">full</string>
+    <string name="battery_plugged_none">not plugged in</string>
+    <string name="battery_plugged_wireless">wireless charging</string>
+    <string name="battery_plugged_usb">usb charging</string>
+    <string name="battery_plugged_ac">wall charging</string>
 </resources>
