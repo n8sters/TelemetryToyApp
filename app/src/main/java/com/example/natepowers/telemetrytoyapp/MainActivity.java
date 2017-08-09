@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -16,7 +17,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -36,15 +36,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     private Button start;
     TextView output;
     OkHttpClient client;
-
+    String alt;
     double lat, lng;
 
 
     @Override
     public void onLocationChanged(Location location) {
-        lat = location.getLatitude();
-        lng = location.getLongitude();
-        Toast.makeText(this, "lat " + lat + ", lng " + lng, Toast.LENGTH_SHORT).show();
         Log.e(TAG, "onLocationChanged: lat " + lat + ", lng " + lng);
     }
 
@@ -83,28 +80,33 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
                         String ts = tel.createTimeStamp();
                         String id = tel.createUUID();
+
+                        float battery = getBatteryPercentage(getApplicationContext());
                         // send packet
                         webSocket.send("{\n" +
                                 "\t\"token\":\"eyJhbGciOiJIUzI1NiJ9.eyJVU0lEIjoiOTFkNTI4NzhjMTgxYWRmNDY4OGU2ODA0ZThkODU0NTA2NzUzMmQ0MyIsInRzIjoxNTAwNTg0ODY4fQ.D5A9WaoA-D3B0XWUAlsFHBs0yRJdd5_5gS_1lcxS-WU\",\n" +
                                 "\t\"messageId\":\" " + id + " \",\n" +
                                 "\t\"payload\":[\n" +
                                 "\t\t\t{\n" +
-                                "\t\t\t\t\"lat\": 1.1,\n" +
-                                "\t\t\t\t\"lng\": 1.1,\n" +
+                                "\t\t\t\t\"lat\": " + lat + ",\n" +
+                                "\t\t\t\t\"lng\": " + lng + ",\n" +
                                 "\t\t\t\t\"hAcc\": 1.1,\n" +
-                                "\t\t\t\t\"alt\": 1.1,\n" +
+                                "\t\t\t\t\"alt\": " + alt + ",\n" +
                                 "\t\t\t\t\"vAcc\": 1.1,\n" +
                                 "\t\t\t\t\"speed\": 1.1,\n" +
                                 "\t\t\t\t\"course\": 1.1,\n" +
-                                "\t\t\t\t\"batt\": 1.00001,\n" +
-                                "\t\t\t\t\"ts\": 1502236470\n" +
+                                "\t\t\t\t\"batt\": " + battery + ",\n" +
+                                "\t\t\t\t\"ts\": " + ts + "\n" +
                                 "\t\t\t}\n" +
                                 "\t\t],\n" +
                                 "\t\"ts\":\"" + ts + "\"\n" +
                                 "}");
 
+                        Log.e(TAG, "run: Lat: " + lat); // latitude
+                        Log.e(TAG, "run: Lng: " + lng);
                         Log.e(TAG, "run: UUID: " + id);
                         Log.e(TAG, "run: timestamp: " + ts);
+                        Log.e(TAG, "run: alt: " + alt );
                         Log.e(TAG, "run: battery: " + getBatteryPercentage(getApplicationContext()));
                         Log.e("", "\n\n");
                     }
@@ -149,43 +151,41 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         output = (TextView) findViewById(R.id.output);
         client = new OkHttpClient();
 
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            if (ContextCompat.checkSelfPermission(MainActivity.this,
-                    Manifest.permission.ACCESS_FINE_LOCATION)
-                    != PackageManager.PERMISSION_GRANTED) {
-
-                // Should we show an explanation?
-                if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
-                        Manifest.permission.ACCESS_FINE_LOCATION)) {
-
-                    // Show an explanation to the user *asynchronously* -- don't block
-                    // this thread waiting for the user's response! After the user
-                    // sees the explanation, try again to request the permission.
-
-                } else {
-
-                    // No explanation needed, we can request the permission.
-
-                    ActivityCompat.requestPermissions(MainActivity.this,
-                            new String[]{Manifest.permission.READ_CONTACTS},
-                            MY_PERMISSIONS_REQUEST_READ_CONTACTS);
-
-                    // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
-                    // app-defined int constant. The callback method gets the
-                    // result of the request.
-                }
-            }
-        }
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
-
-
         start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 start();
+                doAThing();
             }
         });
+
+    }
+
+    public void doAThing() {
+
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+        Criteria criteria = new Criteria();
+        String bestProvider = locationManager.getBestProvider(criteria, false);
+        android.location.Location location = locationManager.getLastKnownLocation(bestProvider);
+        TelemtryMethods tel = new TelemtryMethods();
+
+        lat = (location.getLatitude());
+        lng = (location.getLongitude());
+        alt = tel.getAltutude(location);
+
+        Log.e(TAG, "onCreate: bearing: " + location.getBearing() );
+        Log.e(TAG, "doAThing: acc: " + tel.getAccuracy(location) );
 
     }
 
