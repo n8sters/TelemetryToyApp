@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     TextView output;
     OkHttpClient client;
     double lat, lng, acc, course, alt;
-
+    boolean stopLoop = false;
 
 
     @Override
@@ -76,8 +76,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
         // get the angle around the z-axis rotated
-        course = Math.round(sensorEvent.values[0]);
-        Log.e(TAG, "onSensorChanged: course: " + course );
+        course = (sensorEvent.values[0]);
+        Log.e(TAG, "onSensorChanged: course: " + course);
     }
 
     @Override
@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             // set up runnable handler
             Handler handler1 = new Handler(Looper.getMainLooper());
 
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < 720; i++) {
                 // set timeout thread
                 handler1.postDelayed(new Runnable() {
                     @Override
@@ -122,7 +122,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                         packet.setMessageId(id);
                         packet.setPayload(data);
 
-                        Long tsLong = System.currentTimeMillis()/1000;
+                        Long tsLong = System.currentTimeMillis() / 1000;
                         packet.setTs(tsLong);
 
                         Gson gson = new Gson();
@@ -136,7 +136,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                     }
 
                     // todo change timeout based on battery, internet, etc
-                }, 1000 * i); // currently set to 1 second
+                }, 5000 * i); // currently set to 1 second
 
             }
 
@@ -163,6 +163,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         }
     }
 
+    boolean startButtonClicked = false;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -176,11 +177,26 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                start();
-                doAThing();
-                start.setEnabled(false);
+                if (startButtonClicked) {
+
+                    Log.e(TAG, "onCreate: stopped!");
+                    startButtonClicked = false;
+                    start.setText("START");
+                    stop();
+
+                } else {
+
+                    start();
+                    doAThing();
+                    start.setText("STOP");
+                    startButtonClicked = true;
+                    Log.e(TAG, "onClick: start clicked, boolean: " + startButtonClicked);
+                }
+
+
             }
         });
+
 
     }
 
@@ -202,7 +218,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         String bestProvider = locationManager.getBestProvider(criteria, false);
         android.location.Location location = locationManager.getLastKnownLocation(bestProvider);
 
-        if ( location != null ) {
+        if (location != null) {
             TelemtryMethods tel = new TelemtryMethods();
 
             lat = (location.getLatitude());
@@ -210,10 +226,10 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             alt = Double.parseDouble(tel.getAltutude(location));
             acc = tel.getAccuracy(location);
 
-            Log.e(TAG, "onCreate: bearing: " + location.getBearing() );
-            Log.e(TAG, "doAThing: acc: " + tel.getAccuracy(location) );
+            Log.e(TAG, "onCreate: bearing: " + location.getBearing());
+            Log.e(TAG, "doAThing: acc: " + tel.getAccuracy(location));
         } else {
-            Log.e(TAG, "doAThing: Location was null" );
+            Log.e(TAG, "doAThing: Location was null");
         }
 
     }
@@ -225,6 +241,11 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         client.dispatcher().executorService().shutdown();
     }
 
+    public void stop() {
+        stopLoop = true;
+
+    }
+
 
     private void output(final String text) {
         runOnUiThread(new Runnable() {
@@ -233,16 +254,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                 output.setText(output.getText().toString() + "\n\n" + text);
             }
         });
-    }
-
-
-    public void loadBatteryInfo( ) {
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(Intent.ACTION_POWER_CONNECTED);
-        filter.addAction(Intent.ACTION_POWER_DISCONNECTED);
-        filter.addAction(Intent.ACTION_BATTERY_CHANGED);
-
-        registerReceiver(batteryInfoReceiver, filter);
     }
 
 
@@ -380,7 +391,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         float batteryPct = level / (float) scale;
 
-        return  (batteryPct);
+        return (batteryPct);
     }
 
 }

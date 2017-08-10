@@ -1,7 +1,6 @@
 package com.example.natepowers.telemetrytoyapp;
 
 import android.app.Application;
-import android.util.Log;
 
 /**
  * Created by:
@@ -20,9 +19,5 @@ public class TelemetryApplicationClass extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-
-        Log.e(TAG, "onCreate: called" );
-        MainActivity main = new MainActivity();
-        //main.start();
     }
 }
