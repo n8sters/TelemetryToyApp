@@ -27,6 +27,8 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -39,14 +41,19 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     private Button start;
     TextView output;
     OkHttpClient client;
-    String alt;
-    double lat, lng, acc, course;
+    double lat, lng, acc, course, alt;
 
 
 
     @Override
     public void onLocationChanged(Location location) {
         //Log.e(TAG, "onLocationChanged: lat " + lat + ", lng " + lng);
+        TelemtryMethods tel = new TelemtryMethods();
+
+        lat = location.getLatitude();
+        lng = location.getLongitude();
+        alt = Double.parseDouble(tel.getAltutude(location));
+        acc = tel.getAccuracy(location);
     }
 
     @Override
@@ -88,48 +95,48 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             // set up runnable handler
             Handler handler1 = new Handler(Looper.getMainLooper());
 
-            for (int i = 0; i < 100000; i++) {
+            for (int i = 0; i < 2; i++) {
                 // set timeout thread
                 handler1.postDelayed(new Runnable() {
                     @Override
                     public void run() {
 
-                        String ts = tel.createTimeStamp();
+                        long ts = Long.parseLong(tel.createTimeStamp());
                         String id = tel.createUUID();
 
                         float battery = getBatteryPercentage(getApplicationContext());
-                        // send packet
-                        webSocket.send("{\n" +
-                                "\t\"token\":\"eyJhbGciOiJIUzI1NiJ9.eyJVU0lEIjoiOTFkNTI4NzhjMTgxYWRmNDY4OGU2ODA0ZThkODU0NTA2NzUzMmQ0MyIsInRzIjoxNTAwNTg0ODY4fQ.D5A9WaoA-D3B0XWUAlsFHBs0yRJdd5_5gS_1lcxS-WU\",\n" +
-                                "\t\"messageId\":\" " + id + " \",\n" +
-                                "\t\"payload\":[\n" +
-                                "\t\t\t{\n" +
-                                "\t\t\t\t\"lat\": " + lat + ",\n" +
-                                "\t\t\t\t\"lng\": " + lng + ",\n" +
-                                "\t\t\t\t\"hAcc\": " + acc + ",\n" +
-                                "\t\t\t\t\"alt\": " + alt + ",\n" +
-                                "\t\t\t\t\"vAcc\": -1,\n" + // currently set to -1
-                                "\t\t\t\t\"speed\": 1.1,\n" +
-                                "\t\t\t\t\"course\": " + course + ",\n" +
-                                "\t\t\t\t\"batt\": " + battery + ",\n" +
-                                "\t\t\t\t\"ts\": " + ts + "\n" +
-                                "\t\t\t}\n" +
-                                "\t\t],\n" +
-                                "\t\"ts\":\"" + ts + "\"\n" +
-                                "}");
 
-                        Log.e(TAG, "run: Lat: " + lat); // latitude
-                        Log.e(TAG, "run: Lng: " + lng);
-                        Log.e(TAG, "run: UUID: " + id);
-                        Log.e(TAG, "run: timestamp: " + ts);
-                        Log.e(TAG, "run: alt: " + alt );
-                        Log.e(TAG, "run: course:  " + course );
-                        Log.e(TAG, "run: battery: " + getBatteryPercentage(getApplicationContext()));
+                        String token = "eyJhbGciOiJIUzI1NiJ9.eyJVU0lEIjoiOTFkNTI4NzhjMTgxYWRmNDY4OGU2ODA0ZThkODU0NTA2NzUzMmQ0MyIsInRzIjoxNTAwNTg0ODY4fQ.D5A9WaoA-D3B0XWUAlsFHBs0yRJdd5_5gS_1lcxS-WU";
+
+                        TelemetryPacket packet = new TelemetryPacket();
+
+                        TelemetryPacket.PayloadBean data = new TelemetryPacket.PayloadBean();
+                        packet.setToken(token);
+                        packet.setMessageId(id);
+                        data.setAlt(alt);
+                        data.setLat(lat);
+                        data.setLng(lng);
+                        data.setCourse(course);
+                        data.setBatt(battery);
+                        data.setTs(ts);
+                        packet.setMessageId(id);
+                        packet.setPayload(data);
+
+                        Long tsLong = System.currentTimeMillis()/1000;
+                        packet.setTs(tsLong);
+
+                        Gson gson = new Gson();
+                        String json = gson.toJson(packet);
+
+                        // send packet
+                        webSocket.send(json);
+
+                        Log.e(TAG, "run: Packet Sent: " + json);
                         Log.e("", "\n\n");
                     }
 
                     // todo change timeout based on battery, internet, etc
-                }, 2000 * i); // currently set to 1 second
+                }, 1000 * i); // currently set to 1 second
 
             }
 
@@ -157,8 +164,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     }
 
 
-    int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 100;
-
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -173,6 +178,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             public void onClick(View view) {
                 start();
                 doAThing();
+                start.setEnabled(false);
             }
         });
 
@@ -195,15 +201,20 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         Criteria criteria = new Criteria();
         String bestProvider = locationManager.getBestProvider(criteria, false);
         android.location.Location location = locationManager.getLastKnownLocation(bestProvider);
-        TelemtryMethods tel = new TelemtryMethods();
 
-        lat = (location.getLatitude());
-        lng = (location.getLongitude());
-        alt = tel.getAltutude(location);
-        acc = tel.getAccuracy(location);
+        if ( location != null ) {
+            TelemtryMethods tel = new TelemtryMethods();
 
-        Log.e(TAG, "onCreate: bearing: " + location.getBearing() );
-        Log.e(TAG, "doAThing: acc: " + tel.getAccuracy(location) );
+            lat = (location.getLatitude());
+            lng = (location.getLongitude());
+            alt = Double.parseDouble(tel.getAltutude(location));
+            acc = tel.getAccuracy(location);
+
+            Log.e(TAG, "onCreate: bearing: " + location.getBearing() );
+            Log.e(TAG, "doAThing: acc: " + tel.getAccuracy(location) );
+        } else {
+            Log.e(TAG, "doAThing: Location was null" );
+        }
 
     }
 
@@ -369,7 +380,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         float batteryPct = level / (float) scale;
 
-        return  (batteryPct * 100);
+        return  (batteryPct);
     }
 
 }
