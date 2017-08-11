@@ -121,6 +121,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
         TelemetryMethods tel = new TelemetryMethods();
 
+
         @Override
         public void onOpen(final WebSocket webSocket, Response response) {
             // set up runnable handler
@@ -132,30 +133,9 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                     @Override
                     public void run() {
 
-                        long ts = Long.parseLong(tel.createTimeStamp());
                         String id = tel.createUUID();
 
-                        float battery = getBatteryPercentage(TelemetryApplicationClass.getAppContext());
-
-                        String token = "eyJhbGciOiJIUzI1NiJ9.eyJVU0lEIjoiOTFkNTI4NzhjMTgxYWRmNDY4OGU2ODA0ZThkODU0NTA2NzUzMmQ0MyIsInRzIjoxNTAwNTg0ODY4fQ.D5A9WaoA-D3B0XWUAlsFHBs0yRJdd5_5gS_1lcxS-WU"; // todo set token based on user session
-
-                        TelemetryPacket packet = new TelemetryPacket();
-
-                        TelemetryPacket.PayloadBean data = new TelemetryPacket.PayloadBean();
-                        packet.setToken(token);
-                        packet.setMessageId(id);
-                        data.setAlt(alt);
-                        data.setLat(lat);
-                        data.setLng(lng);
-                        data.setHAcc(acc);
-                        data.setCourse(course);
-                        data.setBatt(battery);
-                        data.setTs(ts);
-                        packet.setMessageId(id);
-                        packet.setPayload(data);
-
-                        Long tsLong = System.currentTimeMillis() / 1000;
-                        packet.setTs(tsLong);
+                        TelemetryPacket packet = generateTelemetryPacket();
 
                         packetQueue.add(packet);
                         packetMap.put(id, packet);
@@ -171,7 +151,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                         Log.e(TAG, "loop: queue size: " + packetQueue.size() );
 
                         // Log.e(TAG, "run: Packet Sent: " + json);
-                       // Log.e("", "\n\n");
+                        // Log.e("", "\n\n");
                     }
 
                     //  todo change timeout based on battery, internet, etc
@@ -192,7 +172,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
         // if an entry in our map is older than 30 seconds, re-add it to the queue, because
         // the server probably didn't get it
-        public void reenqueueOldPacket(int currentTime ) {
+        public void reEnqueueOldPacket(int currentTime ) {
             if ( !packetMap.isEmpty() ) {
                 for (Map.Entry<String, TelemetryPacket> entry : packetMap.entrySet())  {
                     int difference = currentTime - Integer.parseInt(String.valueOf(entry.getValue().getPayload().getTs()));
@@ -211,7 +191,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
             String uuid = extractUUIDFromResponse(text).replace("\"", ""); // remove quotations from response
 
             removeFromMap(uuid);
-            reenqueueOldPacket(Integer.parseInt(tel.createTimeStamp()));
+            //reEnqueueOldPacket(Integer.parseInt(tel.createTimeStamp()));
 
         }
 
@@ -275,28 +255,27 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         return packet;
     }
 
-    public void enquePackets() {
+    public void enqueuePackets(final TelemetryPacket packet) {
         // set up runnable handler
         Handler queueHandler = new Handler(Looper.getMainLooper());
 
         int handlerTimeoutMiltiplier = 0;
-        while( shouldGetTelemetryData ) {
+        for (int i = 0; i < 720; i++) {
             // set timeout thread
             queueHandler.postDelayed(new Runnable() {
 
                 @Override
                 public void run() {
 
-                    TelemetryPacket packet = generateTelemetryPacket();
                     packetQueue.add(packet);
+                    packetMap.put(packet.getMessageId(), packet);
 
                 }
 
 
                 //  todo change timeout based on battery, internet, etc
-            }, 1000 * handlerTimeoutMiltiplier); // currently set to 1 second
+            }, 3000 * i); // currently set to 1 second
 
-            handlerTimeoutMiltiplier++;
         }
 
 
