@@ -135,18 +135,17 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                     @Override
                     public void run() {
 
-                        TelemetryPacket packet = generateTelemetryPacket();
+                        TelemetryPacket packet = packetQueue.poll();
 
                         Gson gson = new Gson();
                         String json = gson.toJson(packet);
                         String id = packet.getMessageId();
 
-                        packetQueue.add(packet);
-                        packetMap.put(id, packet);
                         // send packet
                         webSocket.send(json);
 
                         Log.e(TAG, "run: id: " + id );
+                        Log.e(TAG, "run: string: " + json );
                         Log.e(TAG, "loop: map size: " + packetMap.size() );
                         Log.e(TAG, "loop: queue size: " + packetQueue.size() );
 
@@ -186,6 +185,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
         }
 
+
         @Override
         public void onMessage(WebSocket webSocket, String text) {
             Log.e(TAG, "onMessage: " + extractUUIDFromResponse(text) );
@@ -198,12 +198,18 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
         @Override
         public void onClosing(WebSocket webSocket, int code, String reason) {
+            Log.e(TAG, "onClosing: " + reason );
             webSocket.close(NORMAL_CLOSE_STATUS, null);
         }
 
         @Override
         public void onFailure(WebSocket webSocket, Throwable t, Response response) {
             Log.e(TAG, "onFailure: failed. Response: " + t );
+            Request request = new Request.Builder().url("ws://ec2-34-210-213-56.us-west-2.compute.amazonaws.com:8080").build();
+            OkHttpClient newClient = new OkHttpClient();
+            WebSocketListener listener = new WebSocketListener();
+            webSocket = newClient.newWebSocket(request, listener);
+
         }
     }
 
@@ -222,8 +228,30 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
     }
 
+    public void startTelemeterLoop() {
+        Handler handler1 = new Handler(Looper.getMainLooper());
+
+        Log.e(TAG, "onOpen: called!" );
+
+        for (int i = 0; i < 720; i++) {
+            // set timeout thread
+            handler1.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+
+                    generateTelemetryPacket();
+
+                    Log.e(TAG, "run: looped once" );
+                }
+
+                //  todo change timeout based on battery, internet, etc
+            }, 1000 * i);
+        }
+
+    }
+
     // generate a telemetry packet.
-    public TelemetryPacket generateTelemetryPacket() {
+    public void generateTelemetryPacket() {
 
         final TelemetryMethods tel = new TelemetryMethods();
 
@@ -251,36 +279,8 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         Long tsLong = System.currentTimeMillis() / 1000;
         packet.setTs(tsLong);
 
-
-        return packet;
-    }
-
-    public void telemeterLoop() {
-
-        Handler telemeterHandler = new Handler(Looper.myLooper());
-
-        int handlerTimeoutMultiplier = 0;
-        while( shouldGetTelemetryData ) {
-            // set timeout thread
-            telemeterHandler.postDelayed(new Runnable() {
-
-                @Override
-                public void run() {
-
-                    TelemetryPacket packet = generateTelemetryPacket();
-
-                    String id = packet.getMessageId();
-
-                    packetQueue.add(packet);
-                    packetMap.put(id, packet);
-
-                }
-
-
-            }, 1000 * handlerTimeoutMultiplier); // currently set to 1 second
-
-            handlerTimeoutMultiplier++;
-        }
+        packetQueue.add(packet);
+        packetMap.put(id, packet);
 
     }
 
@@ -304,11 +304,12 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         OkHttpClient newClient = new OkHttpClient();
         webSocket = newClient.newWebSocket(request, listener);
         newClient.dispatcher().executorService().shutdown();
+        newClient.retryOnConnectionFailure();
 
         // start reading location data
         doAThing(TelemetryApplicationClass.getAppContext());
 
-
+        startTelemeterLoop();
     }
 
     // start getting sensor data from the phone
