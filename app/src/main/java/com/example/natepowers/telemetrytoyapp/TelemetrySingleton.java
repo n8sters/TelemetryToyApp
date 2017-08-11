@@ -127,15 +127,17 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
             // set up runnable handler
             Handler handler1 = new Handler(Looper.getMainLooper());
 
+            Log.e(TAG, "onOpen: called!" );
+
             for (int i = 0; i < 720; i++) {
                 // set timeout thread
                 handler1.postDelayed(new Runnable() {
                     @Override
                     public void run() {
 
-                        String id = tel.createUUID();
-
                         TelemetryPacket packet = generateTelemetryPacket();
+
+                        String id = packet.getMessageId();
 
                         packetQueue.add(packet);
                         packetMap.put(id, packet);
@@ -191,7 +193,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
             String uuid = extractUUIDFromResponse(text).replace("\"", ""); // remove quotations from response
 
             removeFromMap(uuid);
-            //reEnqueueOldPacket(Integer.parseInt(tel.createTimeStamp()));
+            reEnqueueOldPacket(Integer.parseInt(tel.createTimeStamp()));
 
         }
 
@@ -240,7 +242,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         packet.setToken(token);
         packet.setMessageId(id);
         data.setAlt(alt);
-        data.setLat(lat);
         data.setLng(lng);
         data.setHAcc(acc);
         data.setCourse(course);
@@ -252,6 +253,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         Long tsLong = System.currentTimeMillis() / 1000;
         packet.setTs(tsLong);
 
+
         return packet;
     }
 
@@ -260,7 +262,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         Handler queueHandler = new Handler(Looper.getMainLooper());
 
         int handlerTimeoutMiltiplier = 0;
-        for (int i = 0; i < 720; i++) {
+        while( shouldGetTelemetryData ) {
             // set timeout thread
             queueHandler.postDelayed(new Runnable() {
 
@@ -274,8 +276,9 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
 
                 //  todo change timeout based on battery, internet, etc
-            }, 3000 * i); // currently set to 1 second
+            }, 1000 * handlerTimeoutMiltiplier); // currently set to 1 second
 
+            handlerTimeoutMiltiplier++;
         }
 
 
