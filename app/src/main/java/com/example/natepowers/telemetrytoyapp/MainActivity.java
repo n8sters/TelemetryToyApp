@@ -34,6 +34,17 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.WebSocket;
 
+
+/**
+ * Created by:
+ * ~~~~~~~~~_  __     __
+ * ~~~~~~~~/ |/ ___ _/ /____
+ * ~~~~~~~/    / _ `/ __/ -_)
+ * ~~~~~~/_/|_/\_,_/\__/\__/
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * ~~~~~~~~~~~~~~~~~~~  at Copia PBC   ~~~~~~~
+ */
+
 public class MainActivity extends AppCompatActivity implements LocationListener, SensorEventListener {
 
     private static final String TAG = "MainActivity";
@@ -57,6 +68,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
             lng = (location.getLongitude());
             alt = Double.parseDouble(tel.getAltutude(location));
             acc = tel.getAccuracy(location);
+            course = location.getBearing();
 
             Log.e(TAG, "onCreate: bearing: " + location.getBearing());
             Log.e(TAG, "doAThing: acc: " + tel.getAccuracy(location));
@@ -83,8 +95,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
         // get the angle around the z-axis rotated
-        course = (sensorEvent.values[0]);
-        Log.e(TAG, "onSensorChanged: course: " + course);
+        Log.e(TAG, "onSensorChanged: course at onSensorChanged: " + sensorEvent.values[0]);
     }
 
     @Override
@@ -244,7 +255,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     }
 
 
-    private void output(final String text) {
+    public void output(final String text) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {

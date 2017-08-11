@@ -19,6 +19,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
+import android.widget.TextView;
 
 import com.google.gson.Gson;
 
@@ -29,12 +30,12 @@ import okhttp3.WebSocket;
 
 /**
  * Created by:
- * ~~~~~~_  __     __        ____      ______
- * ~~~~~/ |/ ___ _/ /____   / __/___  /_  _____  ___ __ __
- * ~~~~/    / _ `/ __/ -_)  > _/_ _/   / / / _ \/ _ / // /
- * ~~~/_/|_/\_,_/\__/\__/  |_____/    /_/  \___/_//_\_, /
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/___/
- * ~~~~~~~~~~~~~~~~~~~  at Copia PBC   ~~~~~~~~~~~~~~~~~~~~~~
+ * ~~~~~~~~~_  __     __
+ * ~~~~~~~~/ |/ ___ _/ /____
+ * ~~~~~~~/    / _ `/ __/ -_)
+ * ~~~~~~/_/|_/\_,_/\__/\__/
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * ~~~~~~~~~~~~~~~~~~~  at Copia PBC   ~~~~~~~
  */
 
 class TelemetrySingleton extends Application implements LocationListener, SensorEventListener {
@@ -48,7 +49,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     private TelemetrySingleton() {
     }
 
-    private static final String TAG = TelemetryApplicationClass.class.getSimpleName();
+    private static final String TAG = TelemetrySingleton.class.getSimpleName();
 
     double lat, lng, acc, course, alt;
     boolean stopLoop = false;
@@ -67,6 +68,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
             lng = (location.getLongitude());
             alt = Double.parseDouble(tel.getAltutude(location));
             acc = tel.getAccuracy(location);
+            course = location.getBearing();
 
             Log.e(TAG, "onCreate: bearing: " + location.getBearing());
             Log.e(TAG, "doAThing: acc: " + tel.getAccuracy(location));
@@ -93,8 +95,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
         // get the angle around the z-axis rotated
-        course = (sensorEvent.values[0]);
-        Log.e(TAG, "onSensorChanged: course: " + course);
+        Log.e(TAG, "onSensorChanged: course at onSensorChanged: " + sensorEvent.values[0]);
     }
 
     @Override
@@ -163,6 +164,9 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         @Override
         public void onMessage(WebSocket webSocket, String text) {
             Log.e(TAG, "onMessage: " + text);
+            TextView txtView = (TextView) ((MainActivity)context).findViewById(R.id.output);
+            txtView.setText("test");
+
 
         }
 
