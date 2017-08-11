@@ -28,11 +28,11 @@ import java.util.UUID;
  * ~~~~~~~~~~~~~~~~~~~  at Copia PBC   ~~~~~~~
  */
 
-public class TelemtryMethods extends AppCompatActivity implements SensorEventListener {
+public class TelemetryMethods extends AppCompatActivity implements SensorEventListener {
 
-    private static final String TAG = "TelemtryMethods";
+    private static final String TAG = "TelemetryMethods";
 
-    TelemtryMethods() {
+    TelemetryMethods() {
     }
 
     // generate a random UUID
