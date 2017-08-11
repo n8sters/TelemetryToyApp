@@ -43,17 +43,26 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     OkHttpClient client;
     double lat, lng, acc, course, alt;
     boolean stopLoop = false;
+    protected LocationManager locationManager;
+    public static final int NORMAL_CLOSE_STATUS = 1000;
 
 
     @Override
     public void onLocationChanged(Location location) {
-        //Log.e(TAG, "onLocationChanged: lat " + lat + ", lng " + lng);
-        TelemtryMethods tel = new TelemtryMethods();
 
-        lat = location.getLatitude();
-        lng = location.getLongitude();
-        alt = Double.parseDouble(tel.getAltutude(location));
-        acc = tel.getAccuracy(location);
+        if (location != null) {
+            TelemtryMethods tel = new TelemtryMethods();
+
+            lat = (location.getLatitude());
+            lng = (location.getLongitude());
+            alt = Double.parseDouble(tel.getAltutude(location));
+            acc = tel.getAccuracy(location);
+
+            Log.e(TAG, "onCreate: bearing: " + location.getBearing());
+            Log.e(TAG, "doAThing: acc: " + tel.getAccuracy(location));
+        } else {
+            Log.e(TAG, "doAThing: Location was null");
+        }
     }
 
     @Override
@@ -71,8 +80,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         Log.d("Latitude", "status");
     }
 
-    protected LocationManager locationManager;
-
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
         // get the angle around the z-axis rotated
@@ -86,7 +93,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     }
 
     private final class WebSocketListener extends okhttp3.WebSocketListener {
-        public static final int NORMAL_CLOSE_STATUS = 1000;
 
         TelemtryMethods tel = new TelemtryMethods();
 
@@ -135,8 +141,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                         Log.e("", "\n\n");
                     }
 
-                    // todo change timeout based on battery, internet, etc
-                }, 5000 * i); // currently set to 1 second
+                    //  todo change timeout based on battery, internet, etc
+                }, 3000 * i); // currently set to 1 second
 
             }
 
@@ -146,7 +152,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         @Override
         public void onMessage(WebSocket webSocket, String text) {
-            output("Receiving bytes: " + text);
+            output("Receiving bytes: " + text + "Lat: " + lat + ", Lng: " + lng);
             Log.e(TAG, "onMessage: " + text);
 
         }
@@ -174,6 +180,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         output = (TextView) findViewById(R.id.output);
         client = new OkHttpClient();
 
+
         start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -182,12 +189,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                     Log.e(TAG, "onCreate: stopped!");
                     startButtonClicked = false;
                     start.setText("START");
-                    stop();
+                    TelemetrySingleton single = TelemetrySingleton.getInstance();
+                    single.stop();
 
                 } else {
-
-                    start();
-                    doAThing();
+                    TelemetrySingleton single = TelemetrySingleton.getInstance();
+                    single.start();
                     start.setText("STOP");
                     startButtonClicked = true;
                     Log.e(TAG, "onClick: start clicked, boolean: " + startButtonClicked);
@@ -218,32 +225,22 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         String bestProvider = locationManager.getBestProvider(criteria, false);
         android.location.Location location = locationManager.getLastKnownLocation(bestProvider);
 
-        if (location != null) {
-            TelemtryMethods tel = new TelemtryMethods();
-
-            lat = (location.getLatitude());
-            lng = (location.getLongitude());
-            alt = Double.parseDouble(tel.getAltutude(location));
-            acc = tel.getAccuracy(location);
-
-            Log.e(TAG, "onCreate: bearing: " + location.getBearing());
-            Log.e(TAG, "doAThing: acc: " + tel.getAccuracy(location));
-        } else {
-            Log.e(TAG, "doAThing: Location was null");
-        }
-
     }
+
+
+
+    WebSocket webSocket;
 
     public void start() {
         Request request = new Request.Builder().url("ws://ec2-34-210-213-56.us-west-2.compute.amazonaws.com:8080").build();
         WebSocketListener listener = new WebSocketListener();
-        WebSocket webSocket = client.newWebSocket(request, listener);
-        client.dispatcher().executorService().shutdown();
+        webSocket = client.newWebSocket(request, listener);
+//        client.dispatcher().executorService().shutdown();
     }
 
     public void stop() {
         stopLoop = true;
-
+        webSocket.close(NORMAL_CLOSE_STATUS, " tracking not needed");
     }
 
 

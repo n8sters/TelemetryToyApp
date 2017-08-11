@@ -1,23 +1,30 @@
 package com.example.natepowers.telemetrytoyapp;
 
 import android.app.Application;
+import android.content.Context;
 
 /**
  * Created by:
- * ~~~~~~_  __     __        ____      ______
- * ~~~~~/ |/ ___ _/ /____   / __/___  /_  _____  ___ __ __
- * ~~~~/    / _ `/ __/ -_)  > _/_ _/   / / / _ \/ _ / // /
- * ~~~/_/|_/\_,_/\__/\__/  |_____/    /_/  \___/_//_\_, /
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/___/
- * ~~~~~~~~~~~~~~~~~~~  at Copia PBC   ~~~~~~~~~~~~~~~~~~~~~~
+ * ~~~~~~_  __     __
+ * ~~~~~/ |/ ___ _/ /____
+ * ~~~~/    / _ `/ __/ -_)
+ * ~~~/_/|_/\_,_/\__/\__/
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * ~~~~~~~~~~~~~~~~~~~  at Copia PBC   ~~~~~~~~~~~~
  */
 
 public class TelemetryApplicationClass extends Application {
 
-    private static final String TAG = "TelemetryApplicationCla";
+    private static Context context;
 
-    @Override
     public void onCreate() {
         super.onCreate();
+        TelemetryApplicationClass.context = getApplicationContext();
     }
+
+    public static Context getAppContext() {
+        return TelemetryApplicationClass.context;
+    }
+
+
 }
