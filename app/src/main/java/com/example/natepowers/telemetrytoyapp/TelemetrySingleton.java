@@ -137,14 +137,12 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
                         TelemetryPacket packet = generateTelemetryPacket();
 
+                        Gson gson = new Gson();
+                        String json = gson.toJson(packet);
                         String id = packet.getMessageId();
 
                         packetQueue.add(packet);
                         packetMap.put(id, packet);
-
-                        Gson gson = new Gson();
-                        String json = gson.toJson(packet);
-
                         // send packet
                         webSocket.send(json);
 
@@ -162,6 +160,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
 
         }
+
 
         // remove message from map when we get a response, so we don't
         // mistakenly send it again.
@@ -221,7 +220,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         super.onCreate();
         context = getApplicationContext();
 
-
     }
 
     // generate a telemetry packet.
@@ -257,35 +255,38 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         return packet;
     }
 
-    public void enqueuePackets(final TelemetryPacket packet) {
-        // set up runnable handler
-        Handler queueHandler = new Handler(Looper.getMainLooper());
+    public void telemeterLoop() {
 
-        int handlerTimeoutMiltiplier = 0;
+        Handler telemeterHandler = new Handler(Looper.myLooper());
+
+        int handlerTimeoutMultiplier = 0;
         while( shouldGetTelemetryData ) {
             // set timeout thread
-            queueHandler.postDelayed(new Runnable() {
+            telemeterHandler.postDelayed(new Runnable() {
 
                 @Override
                 public void run() {
 
+                    TelemetryPacket packet = generateTelemetryPacket();
+
+                    String id = packet.getMessageId();
+
                     packetQueue.add(packet);
-                    packetMap.put(packet.getMessageId(), packet);
+                    packetMap.put(id, packet);
 
                 }
 
 
-                //  todo change timeout based on battery, internet, etc
-            }, 1000 * handlerTimeoutMiltiplier); // currently set to 1 second
+            }, 1000 * handlerTimeoutMultiplier); // currently set to 1 second
 
-            handlerTimeoutMiltiplier++;
+            handlerTimeoutMultiplier++;
         }
-
 
     }
 
+
     // getter for loop control boolean
-    public boolean isShouldGetTelemetryData() {
+    public boolean getShouldGetTelemetryDataBoolean() {
         return shouldGetTelemetryData;
     }
 
@@ -303,7 +304,10 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         OkHttpClient newClient = new OkHttpClient();
         webSocket = newClient.newWebSocket(request, listener);
         newClient.dispatcher().executorService().shutdown();
+
+        // start reading location data
         doAThing(TelemetryApplicationClass.getAppContext());
+
 
     }
 
