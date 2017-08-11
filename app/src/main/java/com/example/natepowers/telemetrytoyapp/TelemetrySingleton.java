@@ -23,6 +23,8 @@ import android.util.Log;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
@@ -59,12 +61,13 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     boolean shouldGetTelemetryData = true;
     protected LocationManager locationManager;
     public static final int NORMAL_CLOSE_STATUS = 1000;
+    WebSocket webSocket;
 
     // a queue for holding the packets to be sent off
-    Queue<TelemetryPacket> packetQueue;
+    Queue<TelemetryPacket> packetQueue = new LinkedList<>();
 
     // a map for referencing the sent packets, so none get lost
-    Map<String, TelemetryPacket> packetMap;
+    HashMap<String, TelemetryPacket> packetMap = new HashMap<>();
 
     Context context;
 
@@ -154,13 +157,20 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                         Long tsLong = System.currentTimeMillis() / 1000;
                         packet.setTs(tsLong);
 
+                        packetQueue.add(packet);
+                        packetMap.put(id, packet);
+
                         Gson gson = new Gson();
                         String json = gson.toJson(packet);
 
                         // send packet
                         webSocket.send(json);
 
-                       // Log.e(TAG, "run: Packet Sent: " + json);
+                        Log.e(TAG, "run: id: " + id );
+                        Log.e(TAG, "loop: map size: " + packetMap.size() );
+                        Log.e(TAG, "loop: queue size: " + packetQueue.size() );
+
+                        // Log.e(TAG, "run: Packet Sent: " + json);
                        // Log.e("", "\n\n");
                     }
 
@@ -175,16 +185,34 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         // mistakenly send it again.
         private void removeFromMap( String uuid ) {
             if ( packetMap.containsKey(uuid)) {
+                Log.e(TAG, "removeFromMap: contained key!");
                 packetMap.remove(uuid);
             }
         }
 
+        // if an entry in our map is older than 30 seconds, re-add it to the queue, because
+        // the server probably didn't get it
+        public void reenqueueOldPacket(int currentTime ) {
+            if ( !packetMap.isEmpty() ) {
+                for (Map.Entry<String, TelemetryPacket> entry : packetMap.entrySet())  {
+                    int difference = currentTime - Integer.parseInt(String.valueOf(entry.getValue().getPayload().getTs()));
+                    if ( difference > 30 ) {
+                        packetQueue.add(entry.getValue());
+                    }
+
+                }
+            }
+
+        }
 
         @Override
         public void onMessage(WebSocket webSocket, String text) {
             Log.e(TAG, "onMessage: " + extractUUIDFromResponse(text) );
-            String uuid = extractUUIDFromResponse(text);
+            String uuid = extractUUIDFromResponse(text).replace("\"", ""); // remove quotations from response
+
             removeFromMap(uuid);
+            reenqueueOldPacket(Integer.parseInt(tel.createTimeStamp()));
+
         }
 
         @Override
@@ -198,7 +226,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         }
     }
 
-    WebSocket webSocket;
+
 
     // does what the method name says
     public String extractUUIDFromResponse(String response){
