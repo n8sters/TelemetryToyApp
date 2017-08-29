@@ -13,18 +13,12 @@ import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.BatteryManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.Looper;
-import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
-import android.widget.TextView;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -35,7 +29,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
-import okhttp3.Cache;
 import okhttp3.CacheControl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -62,8 +55,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
     private TelemetrySingleton() {
     }
-
-    Cache cache;
 
     private static final String TAG = TelemetrySingleton.class.getSimpleName();
 
@@ -168,39 +159,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
             // trigger first time
             handler1.post(runnable);
 
-//            for (int i = 0; i < 10000; i++) {
-//                // set timeout thread
-//                handler1.postDelayed(new Runnable() {
-//                    public void run() {
-//
-//                        if (!packetQueue.isEmpty()) {
-//                            TelemetryPacket packet = packetQueue.poll();
-//
-//                            Gson gson = new Gson();
-//                            String json = gson.toJson(packet);
-//                            String id = packet.getMessageId();
-//
-//                            // send packet
-//                            webSocket.send(json);
-//
-//                            Log.e(TAG, "run: id: " + id);
-//                            Log.e(TAG, "run: string: " + json);
-//
-//
-//                        }
-//
-//                        Log.e(TAG, "loop: map size: " + packetMap.size());
-//                        Log.e(TAG, "loop: queue size: " + packetQueue.size());
-//
-//                        // Log.e(TAG, "run: Packet Sent: " + json);
-//                        // Log.e("", "\n\n");
-//                    }
-//
-//                    //  todo change timeout based on battery, internet, etc
-//                }, 500 * i);
-//            }
-
-
         }
 
         // remove message from map when we get a response, so we don't
@@ -227,6 +185,8 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
         }
 
+
+        // this is triggered when we get a response
         @Override
         public void onMessage(WebSocket webSocket, String text) {
             Log.e(TAG, "onMessage: Message received! UUID: " + extractUUIDFromResponse(text));
@@ -247,7 +207,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         public void onFailure(WebSocket webSocket, Throwable t, Response response) {
             Log.e(TAG, "onFailure: failed. Response: " + t);
             stop();
-            //start();
         }
     }
 
@@ -261,12 +220,13 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     public void onCreate() {
         super.onCreate();
         context = getApplicationContext();
+        Log.e(TAG, "onCreate: created!" );
+        refreshLoop();
     }
 
-    int count = 0;
     final Handler handler = new Handler();
 
-    public void loopTest() {
+    public void packetGeneratorLoop() {
 
         final Runnable runnable = new Runnable() {
             public void run() {
@@ -283,9 +243,26 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         handler.post(runnable);
     }
 
-    public void restartLoop() {
+    int count = 0;
+    Handler refreshHandler = new Handler();
+    public void refreshLoop() {
 
+        final Runnable runnable = new Runnable() {
+            public void run() {
+
+                if (count++ < 1000000) {
+                    refreshHandler.postDelayed(this, 30000); // 30 seconds
+                    stop();
+                    start();
+                    Log.e(TAG, "run: refreshed");
+                }
+            }
+        };
+
+        // trigger first time
+        refreshHandler.post(runnable);
     }
+
 
     // generate a telemetry packet.
     public void generateTelemetryPacket() {
@@ -336,6 +313,9 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     // start connecting to web socket
     void start() {
 
+        socketLoopBoolean = true;
+        telemetryLoopBoolean = true;
+
         Request request = new Request.Builder().cacheControl(new CacheControl.Builder().noCache().build()).url("ws://ec2-34-210-213-56.us-west-2.compute.amazonaws.com:8080").build();
         WebSocketListener listener = new WebSocketListener();
         OkHttpClient newClient = new OkHttpClient.Builder().retryOnConnectionFailure(true).readTimeout(3, TimeUnit.SECONDS).build();
@@ -345,7 +325,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         // start reading location data
         doAThing(TelemetryApplicationClass.getAppContext());
 
-        loopTest();
+        packetGeneratorLoop();
 
     }
 
@@ -372,11 +352,21 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
     }
 
+    public void restartMethod() {
+        Log.e(TAG, "restartMethod: RESTART CALLED" );
+        stop();
+        start();
+    }
+
 
     // stop talking to the web socket
     public void stop() {
 //        stopLoop = true;
-        webSocket.close(NORMAL_CLOSE_STATUS, " tracking not needed");
+        if ( webSocket != null ) {
+            webSocket.close(NORMAL_CLOSE_STATUS, " tracking not needed");
+        }
+        socketLoopBoolean = false;
+        telemetryLoopBoolean = false;
     }
 
 
@@ -393,5 +383,8 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
         return (batteryPct);
     }
+
+
+
 
 }

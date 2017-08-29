@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -29,18 +30,25 @@ public class MainActivity extends AppCompatActivity  {
     private static final String TAG = "MainActivity";
 
     private Button start;
+    Button restartButton;
     TextView output;
     static TextView connected;
     boolean startButtonClicked = false;
 
     @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
+    public void onCreate(@Nullable final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         start = (Button) findViewById(R.id.start);
         output = (TextView) findViewById(R.id.output);
         connected = (TextView) findViewById(R.id.connected) ;
+        restartButton = (Button) findViewById(R.id.restart);
+
+
+        TelemetrySingleton fresh = TelemetrySingleton.getInstance();
+        fresh.refreshLoop();
+
 
         start.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -62,6 +70,15 @@ public class MainActivity extends AppCompatActivity  {
                 }
 
 
+            }
+        });
+
+
+        restartButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TelemetrySingleton single = TelemetrySingleton.getInstance();
+                single.restartMethod();
             }
         });
 
