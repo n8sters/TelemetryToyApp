@@ -19,6 +19,7 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
@@ -67,7 +68,8 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     private static final String TAG = TelemetrySingleton.class.getSimpleName();
 
     double lat, lng, acc, course, alt;
-    boolean stopLoop = false;
+    boolean telemetryLoopBoolean = true;
+    boolean socketLoopBoolean = true;
     boolean shouldGetTelemetryData = true;
     protected LocationManager locationManager;
     public static final int NORMAL_CLOSE_STATUS = 1000;
@@ -125,6 +127,8 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
     }
 
+    Looper myLooper = Looper.myLooper();
+    Handler handler1 = new Handler(myLooper);
 
     private final class WebSocketListener extends okhttp3.WebSocketListener {
 
@@ -133,17 +137,12 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
         @Override
         public void onOpen(final WebSocket webSocket, Response response) {
-            // set up runnable handler
-            Handler handler1 = new Handler(Looper.getMainLooper());
 
-            Log.e(TAG, "onOpen: called!");
+            final Runnable runnable = new Runnable() {
+                public void run() {
 
-            for (int i = 0; i < 10000; i++) {
-                // set timeout thread
-                handler1.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-
+                    if (socketLoopBoolean) {
+                        handler1.postDelayed(this, 500);
                         if (!packetQueue.isEmpty()) {
                             TelemetryPacket packet = packetQueue.poll();
 
@@ -162,14 +161,44 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
                         Log.e(TAG, "loop: map size: " + packetMap.size());
                         Log.e(TAG, "loop: queue size: " + packetQueue.size());
-
-                        // Log.e(TAG, "run: Packet Sent: " + json);
-                        // Log.e("", "\n\n");
                     }
+                }
+            };
 
-                    //  todo change timeout based on battery, internet, etc
-                }, 500 * i);
-            }
+            // trigger first time
+            handler1.post(runnable);
+
+//            for (int i = 0; i < 10000; i++) {
+//                // set timeout thread
+//                handler1.postDelayed(new Runnable() {
+//                    public void run() {
+//
+//                        if (!packetQueue.isEmpty()) {
+//                            TelemetryPacket packet = packetQueue.poll();
+//
+//                            Gson gson = new Gson();
+//                            String json = gson.toJson(packet);
+//                            String id = packet.getMessageId();
+//
+//                            // send packet
+//                            webSocket.send(json);
+//
+//                            Log.e(TAG, "run: id: " + id);
+//                            Log.e(TAG, "run: string: " + json);
+//
+//
+//                        }
+//
+//                        Log.e(TAG, "loop: map size: " + packetMap.size());
+//                        Log.e(TAG, "loop: queue size: " + packetQueue.size());
+//
+//                        // Log.e(TAG, "run: Packet Sent: " + json);
+//                        // Log.e("", "\n\n");
+//                    }
+//
+//                    //  todo change timeout based on battery, internet, etc
+//                }, 500 * i);
+//            }
 
 
         }
@@ -214,12 +243,11 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
             webSocket.close(NORMAL_CLOSE_STATUS, null);
         }
 
-        @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
         @Override
         public void onFailure(WebSocket webSocket, Throwable t, Response response) {
             Log.e(TAG, "onFailure: failed. Response: " + t);
             stop();
-            start();
+            //start();
         }
     }
 
@@ -236,58 +264,26 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     }
 
     int count = 0;
+    final Handler handler = new Handler();
+
     public void loopTest() {
-//        final Handler handler = new Handler();
-//
-//
-//
-//        final Runnable runnable = new Runnable() {
-//            public void run() {
-//
-//                // need to do tasks on the UI thread
-//                Log.d(TAG, "runnnnnnnnn testttttttttttt");
-//
-//
-//                if (count++ < 50)
-//                    handler.postDelayed(this, 500);
-//                Log.d(TAG, "run: wat" );
-//
-//            }
-//        };
-//
-//        // trigger first time
-//        handler.post(runnable);
+
+        final Runnable runnable = new Runnable() {
+            public void run() {
+
+                if (telemetryLoopBoolean) {
+                    handler.postDelayed(this, 1000);
+                    generateTelemetryPacket();
+                    Log.e(TAG, "run: generated tel packet");
+                }
+            }
+        };
+
+        // trigger first time
+        handler.post(runnable);
     }
 
-
-
-    public void startTelemeterLoop() {
-        final Handler handler1 = new Handler(Looper.getMainLooper());
-
-        Log.e(TAG, "startTelemeter onOpen: called!");
-
-        for (int i = 0; i < 10000; i++) {
-            handler1.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-
-                    try {
-
-                        generateTelemetryPacket();
-
-
-                    } catch (Throwable t) {
-                        Log.e(TAG, "run: error: " + t);
-                    }
-
-
-                    //Log.e(TAG, "run: online: " + MainActivity.returnOnline() );
-
-                    Log.e(TAG, "run: looped once");
-                }
-
-            }, 1000 * i);
-        }
+    public void restartLoop() {
 
     }
 
@@ -351,16 +347,9 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
         loopTest();
 
-        startTelemeterLoop();
     }
 
-    public void restart() {
-        Request request = new Request.Builder().cacheControl(new CacheControl.Builder().maxAge(1, TimeUnit.MINUTES).build()).url("ws://ec2-34-210-213-56.us-west-2.compute.amazonaws.com:8080").build();
-        WebSocketListener listener = new WebSocketListener();
-        OkHttpClient newClient = new OkHttpClient.Builder().retryOnConnectionFailure(true).readTimeout(3, TimeUnit.SECONDS).build();
-        webSocket = newClient.newWebSocket(request, listener);
-        //newClient.dispatcher().executorService().shutdown();
-    }
+
 
     // start getting sensor data from the phone
     public void doAThing(Context c) {
