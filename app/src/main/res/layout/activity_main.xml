@@ -22,7 +22,6 @@
 
         <TextView
             android:id="@+id/output"
-            android:layout_below="@id/start"
             android:layout_centerHorizontal="true"
             android:layout_width="wrap_content"
             android:layout_marginTop="30dp"
@@ -31,6 +30,14 @@
 
     </ScrollView>
 
+    <TextView
+        android:id="@+id/connected"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/start"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="94dp"
+        android:text="Internet Connected" />
 
 
 </RelativeLayout>
