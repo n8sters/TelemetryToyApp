@@ -30,9 +30,7 @@ public class MainActivity extends AppCompatActivity  {
     private static final String TAG = "MainActivity";
 
     private Button start;
-    Button restartButton;
     TextView output;
-    static TextView connected;
     boolean startButtonClicked = false;
 
     @Override
@@ -42,9 +40,6 @@ public class MainActivity extends AppCompatActivity  {
 
         start = (Button) findViewById(R.id.start);
         output = (TextView) findViewById(R.id.output);
-        connected = (TextView) findViewById(R.id.connected) ;
-        restartButton = (Button) findViewById(R.id.restart);
-
 
         TelemetrySingleton fresh = TelemetrySingleton.getInstance();
         fresh.refreshLoop();
@@ -74,14 +69,6 @@ public class MainActivity extends AppCompatActivity  {
         });
 
 
-        restartButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                TelemetrySingleton single = TelemetrySingleton.getInstance();
-                single.restartMethod();
-            }
-        });
-
         Log.e(TAG, "onCreate: online: " + isOnline() );
     }
 
@@ -99,6 +86,7 @@ public class MainActivity extends AppCompatActivity  {
         if (networkInfo != null && networkInfo.isConnected()) {
             isAvailable = true;
         }
+        Log.e(TAG, "isOnline: online: " + isAvailable );
         online = isAvailable;
         return isAvailable;
     }

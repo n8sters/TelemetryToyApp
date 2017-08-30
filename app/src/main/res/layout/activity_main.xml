@@ -30,24 +30,7 @@
 
     </ScrollView>
 
-    <TextView
-        android:id="@+id/connected"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/start"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="94dp"
-        android:text="Internet Connected" />
 
-    <Button
-        android:id="@+id/restart"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignBottom="@+id/connected"
-        android:layout_alignLeft="@+id/start"
-        android:layout_alignStart="@+id/start"
-        android:layout_marginBottom="26dp"
-        android:text="restart" />
 
 
 </RelativeLayout>

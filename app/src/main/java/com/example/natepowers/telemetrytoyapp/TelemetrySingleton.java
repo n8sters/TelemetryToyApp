@@ -13,6 +13,8 @@ import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -132,8 +134,9 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
             final Runnable runnable = new Runnable() {
                 public void run() {
 
+                    int i = 1;
                     if (socketLoopBoolean) {
-                        handler1.postDelayed(this, 500);
+                        handler1.postDelayed(this, 500 * i++);
                         if (!packetQueue.isEmpty()) {
                             TelemetryPacket packet = packetQueue.poll();
 
@@ -144,19 +147,15 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                             // send packet
                             webSocket.send(json);
 
-                            Log.e(TAG, "run: id: " + id);
-                            Log.e(TAG, "run: string: " + json);
-
 
                         }
-
-                        Log.e(TAG, "loop: map size: " + packetMap.size());
-                        Log.e(TAG, "loop: queue size: " + packetQueue.size());
+                        Log.e(TAG, "main loop: map size: " + packetMap.size());
+                        Log.e(TAG, "main loop: queue size: " + packetQueue.size());
                     }
                 }
             };
 
-            // trigger first time
+            // loop again
             handler1.post(runnable);
 
         }
@@ -206,7 +205,8 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         @Override
         public void onFailure(WebSocket webSocket, Throwable t, Response response) {
             Log.e(TAG, "onFailure: failed. Response: " + t);
-            stop();
+            socketLoopBoolean = false;
+            telemetryLoopBoolean = false;
         }
     }
 
@@ -220,7 +220,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     public void onCreate() {
         super.onCreate();
         context = getApplicationContext();
-        Log.e(TAG, "onCreate: created!" );
+        Log.e(TAG, "onCreate: created!");
         refreshLoop();
     }
 
@@ -231,8 +231,9 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         final Runnable runnable = new Runnable() {
             public void run() {
 
+                int i = 1;
                 if (telemetryLoopBoolean) {
-                    handler.postDelayed(this, 1000);
+                    handler.postDelayed(this, 5000 * i++);
                     generateTelemetryPacket();
                     Log.e(TAG, "run: generated tel packet");
                 }
@@ -245,16 +246,24 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
     int count = 0;
     Handler refreshHandler = new Handler();
+
     public void refreshLoop() {
 
         final Runnable runnable = new Runnable() {
             public void run() {
 
-                if (count++ < 1000000) {
+                if (count++ < 10000) {
+                    Log.d(TAG, "restartMethod: RESTART CALLED" + "\nsocket: "
+                            + socketLoopBoolean + "\ntel: " + telemetryLoopBoolean);
+
                     refreshHandler.postDelayed(this, 30000); // 30 seconds
-                    stop();
-                    start();
-                    Log.e(TAG, "run: refreshed");
+                    if (!socketLoopBoolean && !telemetryLoopBoolean) {
+
+                        stop();
+                        start();
+
+                        Log.d(TAG, "run: REFRESH STARTED! ");
+                    }
                 }
             }
         };
@@ -299,17 +308,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     }
 
 
-    // getter for loop control boolean
-    public boolean getShouldGetTelemetryDataBoolean() {
-        return shouldGetTelemetryData;
-    }
-
-    // setter for loop control boolean
-    public void setShouldGetTelemetryData(boolean shouldGetTelemetryData) {
-        this.shouldGetTelemetryData = shouldGetTelemetryData;
-    }
-
-
     // start connecting to web socket
     void start() {
 
@@ -320,7 +318,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         WebSocketListener listener = new WebSocketListener();
         OkHttpClient newClient = new OkHttpClient.Builder().retryOnConnectionFailure(true).readTimeout(3, TimeUnit.SECONDS).build();
         webSocket = newClient.newWebSocket(request, listener);
-        //newClient.dispatcher().executorService().shutdown();
 
         // start reading location data
         doAThing(TelemetryApplicationClass.getAppContext());
@@ -328,7 +325,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         packetGeneratorLoop();
 
     }
-
 
 
     // start getting sensor data from the phone
@@ -352,17 +348,11 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
     }
 
-    public void restartMethod() {
-        Log.e(TAG, "restartMethod: RESTART CALLED" );
-        stop();
-        start();
-    }
-
 
     // stop talking to the web socket
     public void stop() {
-//        stopLoop = true;
-        if ( webSocket != null ) {
+
+        if (webSocket != null) {
             webSocket.close(NORMAL_CLOSE_STATUS, " tracking not needed");
         }
         socketLoopBoolean = false;
@@ -379,12 +369,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         int level = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) : -1;
         int scale = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1) : -1;
 
-        float batteryPct = level / (float) scale;
-
-        return (batteryPct);
+        return level / (float) scale;
     }
-
-
-
 
 }
