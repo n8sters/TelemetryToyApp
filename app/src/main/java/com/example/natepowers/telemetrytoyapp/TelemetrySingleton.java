@@ -16,9 +16,11 @@ import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.BatteryManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
@@ -250,11 +252,14 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     public void refreshLoop() {
 
         final Runnable runnable = new Runnable() {
+            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             public void run() {
 
                 if (count++ < 10000) {
                     Log.d(TAG, "restartMethod: RESTART CALLED" + "\nsocket: "
                             + socketLoopBoolean + "\ntel: " + telemetryLoopBoolean);
+
+                    Log.d(TAG, "run: Timeout stats: " + TimoutCalculator.getDataString() );
 
                     refreshHandler.postDelayed(this, 30000); // 30 seconds
                     if (!socketLoopBoolean && !telemetryLoopBoolean) {

@@ -57,7 +57,7 @@ public class TimoutCalculator {
     }
 
     // check to see if the phone has internet
-    public boolean isConnected() {
+    public static boolean isConnected() {
         ConnectivityManager cm =
                 (ConnectivityManager)TelemetryApplicationClass.getAppContext().getSystemService(Context.CONNECTIVITY_SERVICE);
 
@@ -67,7 +67,7 @@ public class TimoutCalculator {
 
     }
 
-    public String typeOfInternetConnected() {
+    public static String typeOfInternetConnected() {
 
         ConnectivityManager cm =
                 (ConnectivityManager)TelemetryApplicationClass.getAppContext().getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -77,13 +77,13 @@ public class TimoutCalculator {
         boolean isMobile = activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE;
         boolean noNetwork = activeNetwork.getExtraInfo() == ConnectivityManager.EXTRA_NO_CONNECTIVITY;
 
-        return null;
+        return "Is wifi: " + isWiFi + "\nIs Mobile: " + isMobile + "\nno network: " + noNetwork;
     }
 
 
 
     // check is phone is charging, or battery is at 100%
-    public boolean isCharging() {
+    public static boolean isCharging() {
         IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         Intent batteryStatus = TelemetryApplicationClass.getAppContext().registerReceiver(null, ifilter);
         int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
@@ -106,6 +106,20 @@ public class TimoutCalculator {
         return level / (float) scale;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public static String getDataString() {
+
+        Context c = TelemetryApplicationClass.getAppContext();
+
+        return ("Timeout calculator stats: " +
+        "\nBattery percent: " + getBatteryPercentage(c) +
+        "\nis charging: " + isCharging() + "\ntype of internet connected: " + typeOfInternetConnected() +
+        "\nIs connected: " + isConnected() + "\nGetLocationMode: " + getLocationMode(c) +
+        "\nGet location mode off: " + getLocationModeOff(c) + "\nGet location high accuracy: " +
+        getLocationHighAccuracy(c) + "\nGet location battery saving: " + getLocationBatterySavings(c));
+
+
+    }
 
 
 
