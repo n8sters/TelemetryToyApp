@@ -30,7 +30,7 @@ public class MainActivity extends AppCompatActivity  {
     private static final String TAG = "MainActivity";
 
     private Button start;
-    TextView output;
+    static TextView output;
     boolean startButtonClicked = false;
 
     @Override
@@ -77,6 +77,10 @@ public class MainActivity extends AppCompatActivity  {
     }
 
     public static boolean online = false;
+
+    public static void setOutput(String message) {
+        output.setText(message);
+    }
 
     public boolean isOnline() {
         ConnectivityManager manager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);

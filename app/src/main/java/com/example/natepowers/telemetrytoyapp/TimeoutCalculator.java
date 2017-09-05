@@ -14,9 +14,12 @@ import android.support.annotation.RequiresApi;
 import android.telephony.CellInfoGsm;
 import android.telephony.CellSignalStrengthGsm;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 
 // for determining the packet sending timeout length
-public class TimoutCalculator {
+public class TimeoutCalculator {
+
+    private static final String TAG = "TimeoutCalculator";
 
     /**         Things to consider:
      *
@@ -77,6 +80,13 @@ public class TimoutCalculator {
         boolean isMobile = activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE;
         boolean noNetwork = activeNetwork.getExtraInfo() == ConnectivityManager.EXTRA_NO_CONNECTIVITY;
 
+        if ( isWiFi) {
+            return "wifi";
+        }else if ( isMobile) {
+            return "mobile";
+        } else if ( noNetwork ) {
+            return "noNetwork";
+        }
         return "Is wifi: " + isWiFi + "\nIs Mobile: " + isMobile + "\nno network: " + noNetwork;
     }
 
@@ -119,6 +129,29 @@ public class TimoutCalculator {
         getLocationHighAccuracy(c) + "\nGet location battery saving: " + getLocationBatterySavings(c));
 
 
+    }
+
+    private static int battery = (int) (getBatteryPercentage(TelemetryApplicationClass.getAppContext()) * 100);
+
+
+    // set the timeout of the packet sending loop
+    public static int setTimeout() {
+
+        Log.e(TAG, "setTimeout: battery: " + battery );
+
+        if ( battery > 90 && isCharging() && typeOfInternetConnected().equals("wifi") ) {
+            return 100;
+        } else if ( battery > 90 && isCharging() ){
+            return 200;
+        } else if ( battery > 60 && isCharging() || battery > 80 ) {
+            return 300;
+        } else if ( battery < 20 ) {
+            return 5000;
+        } else if (typeOfInternetConnected().equals("noNetwork") ) {
+            return 10000;
+        }
+
+        return 1000;
     }
 
 

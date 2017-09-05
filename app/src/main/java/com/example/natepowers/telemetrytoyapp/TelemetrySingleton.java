@@ -65,7 +65,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     double lat, lng, acc, course, alt;
     boolean telemetryLoopBoolean = true;
     boolean socketLoopBoolean = true;
-    boolean shouldGetTelemetryData = true;
     protected LocationManager locationManager;
     public static final int NORMAL_CLOSE_STATUS = 1000;
     WebSocket webSocket;
@@ -77,6 +76,8 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     HashMap<String, TelemetryPacket> packetMap = new HashMap<>();
 
     Context context;
+
+    int timeout = 1000;
 
     @Override
     public void onLocationChanged(Location location) {
@@ -138,7 +139,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
                     int i = 1;
                     if (socketLoopBoolean) {
-                        handler1.postDelayed(this, 500 * i++);
+                        handler1.postDelayed(this, timeout * i++);
                         if (!packetQueue.isEmpty()) {
                             TelemetryPacket packet = packetQueue.poll();
 
@@ -192,7 +193,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         public void onMessage(WebSocket webSocket, String text) {
             Log.e(TAG, "onMessage: Message received! UUID: " + extractUUIDFromResponse(text));
             String uuid = extractUUIDFromResponse(text).replace("\"", ""); // remove quotations from response
-
             removeFromMap(uuid);
             reEnqueueOldPacket(Integer.parseInt(tel.createTimeStamp()));
 
@@ -207,6 +207,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         @Override
         public void onFailure(WebSocket webSocket, Throwable t, Response response) {
             Log.e(TAG, "onFailure: failed. Response: " + t);
+
             socketLoopBoolean = false;
             telemetryLoopBoolean = false;
         }
@@ -237,6 +238,9 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                 if (telemetryLoopBoolean) {
                     handler.postDelayed(this, 5000 * i++);
                     generateTelemetryPacket();
+
+                    timeout = TimeoutCalculator.setTimeout();
+                    Log.e(TAG, "run: timeout: " + timeout );
                     Log.e(TAG, "run: generated tel packet");
                 }
             }
@@ -259,7 +263,8 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                     Log.d(TAG, "restartMethod: RESTART CALLED" + "\nsocket: "
                             + socketLoopBoolean + "\ntel: " + telemetryLoopBoolean);
 
-                    Log.d(TAG, "run: Timeout stats: " + TimoutCalculator.getDataString() );
+                    Log.d(TAG, "run: Timeout stats: " + TimeoutCalculator.getDataString() );
+                    Log.d(TAG, "run: timeout: " + TimeoutCalculator.setTimeout());
 
                     refreshHandler.postDelayed(this, 30000); // 30 seconds
                     if (!socketLoopBoolean && !telemetryLoopBoolean) {
@@ -307,7 +312,21 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         Long tsLong = System.currentTimeMillis() / 1000;
         packet.setTs(tsLong);
 
-        packetQueue.add(packet);
+        Log.d(TAG, "generateTelemetryPacket: ts: " + tsLong);
+        if ( !packetQueue.isEmpty()) {
+            Log.d(TAG, "generateTelemetryPacket: queue peek ts: " + packetQueue.peek().getTs());
+
+
+        }
+
+        if ( !packetQueue.isEmpty()) {
+            if ( packetQueue.peek().getTs() != tsLong ) {
+                packetQueue.add(packet);
+            }
+        } else {
+            packetQueue.add(packet);
+        }
+
         packetMap.put(id, packet);
 
     }
