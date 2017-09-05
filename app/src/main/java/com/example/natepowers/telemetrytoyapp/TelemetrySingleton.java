@@ -151,6 +151,8 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                             webSocket.send(json);
 
 
+                        } else {
+                            timeout = 3000;
                         }
                         Log.e(TAG, "main loop: map size: " + packetMap.size());
                         Log.e(TAG, "main loop: queue size: " + packetQueue.size());
@@ -239,7 +241,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                     handler.postDelayed(this, 5000 * i++);
                     generateTelemetryPacket();
 
-                    timeout = TimeoutCalculator.setTimeout();
+                    timeout = TimeoutCalculator.setTimeout(packetQueue.size());
                     Log.e(TAG, "run: timeout: " + timeout );
                     Log.e(TAG, "run: generated tel packet");
                 }
@@ -264,7 +266,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                             + socketLoopBoolean + "\ntel: " + telemetryLoopBoolean);
 
                     Log.d(TAG, "run: Timeout stats: " + TimeoutCalculator.getDataString() );
-                    Log.d(TAG, "run: timeout: " + TimeoutCalculator.setTimeout());
+                    Log.d(TAG, "run: timeout: " + TimeoutCalculator.setTimeout(packetQueue.size()));
 
                     refreshHandler.postDelayed(this, 30000); // 30 seconds
                     if (!socketLoopBoolean && !telemetryLoopBoolean) {

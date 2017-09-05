@@ -135,11 +135,13 @@ public class TimeoutCalculator {
 
 
     // set the timeout of the packet sending loop
-    public static int setTimeout() {
+    public static int setTimeout(int queueSize) {
 
         Log.e(TAG, "setTimeout: battery: " + battery );
 
-        if ( battery > 90 && isCharging() && typeOfInternetConnected().equals("wifi") ) {
+        if ( queueSize < 2 ) {
+            return 3000;
+        } else if ( battery > 90 && isCharging() && typeOfInternetConnected().equals("wifi") ) {
             return 100;
         } else if ( battery > 90 && isCharging() ){
             return 200;
