@@ -15,16 +15,26 @@ class TelemetryPacket {
 
 
     /**
+     * UUID : 9pu8ewhfo8v3rbr873piuh
      * token : eyJhbGciOiJIUzI1NiJ9.eyJVU0lEIjoiOTFkNTI4NzhjMTgxYWRmNDY4OGU2ODA0ZThkODU0NTA2NzUzMmQ0MyIsInRzIjoxNTAwNTg0ODY4fQ.D5A9WaoA-D3B0XWUAlsFHBs0yRJdd5_5gS_1lcxS-WU
      * messageId : 557264d2-ee65-41a9-b3b5-83d205562431
      * payload : {"lat":1.1,"lng":1.1,"hAcc":1.1,"alt":1.1,"vAcc":1.1,"speed":1.1,"course":1.1,"batt":1.00001,"ts":98298723420209}
      * ts : 12345698723
      */
 
+    private String UUID;
     private String token;
     private String messageId;
     private PayloadBean payload;
     private long ts;
+
+    public String getUUID() {
+        return UUID;
+    }
+
+    public void setUUID(String UUID) {
+        this.UUID = UUID;
+    }
 
     public String getToken() {
         return token;
