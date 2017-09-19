@@ -1,8 +1,10 @@
 package com.example.natepowers.telemetrytoyapp;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.app.Application;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
@@ -13,13 +15,12 @@ import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+
 import android.provider.Settings;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
@@ -28,22 +29,17 @@ import android.util.Log;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
-import okhttp3.Authenticator;
 import okhttp3.CacheControl;
-import okhttp3.Credentials;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import okhttp3.Route;
 import okhttp3.WebSocket;
-import okhttp3.logging.HttpLoggingInterceptor;
 
 /**
  * Created by:
@@ -65,7 +61,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
     private TelemetrySingleton() {
     }
-    String token = "eyJhbGciOiJIUzI1NiJ9.eyJVU0lEIjoiNmZlYTUyNWRhZGFiYjA0ZGNmNWZjMjU1NzJiZWI1NjBjZTFhOWVmMyIsInRzIjoxNTA0ODk4OTMzfQ.KkrSNLFo9BUnt8JweWJQUF8p2BSTSWb3Ke0wCBLiOAc";
 
     private static final String TAG = TelemetrySingleton.class.getSimpleName();
 
@@ -86,8 +81,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
     int timeout = 1000;
 
-    String UUID = Settings.Secure.getString(context.getContentResolver(),
-            Settings.Secure.ANDROID_ID);
+    String UUID = "6fab693e3db5a4b9";
 
     @Override
     public void onLocationChanged(Location location) {
@@ -203,8 +197,8 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         // this is triggered when we get a response from the web socket
         @Override
         public void onMessage(WebSocket webSocket, String text) {
-            Log.d(TAG, "onMessage: response: " + text );
-            Log.e(TAG, "onMessage: Message received! UUID: " + extractUUIDFromResponse(text));
+            Log.d(TAG, "onMessage: response: " + text);
+            Log.d(TAG, "onMessage: Message received! UUID: " + extractUUIDFromResponse(text));
             String uuid = extractUUIDFromResponse(text).replace("\"", ""); // remove quotations from response
             removeFromMap(uuid);
             reEnqueueOldPacket(Integer.parseInt(tel.createTimeStamp()));
@@ -219,8 +213,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
         @Override
         public void onFailure(WebSocket webSocket, Throwable t, Response response) {
-            Log.e(TAG, "onFailure: failed. Response: " + t);
-
+            Log.e(TAG, "onFailure: failed. Response: " + response + ", throwable: " + t);
             socketLoopBoolean = false;
             telemetryLoopBoolean = false;
         }
@@ -253,7 +246,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                     generateTelemetryPacket();
 
                     timeout = TimeoutCalculator.setTimeout(packetQueue.size());
-                    Log.e(TAG, "run: timeout: " + timeout );
+                    Log.e(TAG, "run: timeout: " + timeout);
                     Log.e(TAG, "run: generated tel packet");
                 }
             }
@@ -276,7 +269,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
                     Log.d(TAG, "restartMethod: RESTART CALLED" + "\nsocket: "
                             + socketLoopBoolean + "\ntel: " + telemetryLoopBoolean);
 
-                    Log.d(TAG, "run: Timeout stats: " + TimeoutCalculator.getDataString() );
+                    Log.d(TAG, "run: Timeout stats: " + TimeoutCalculator.getDataString());
                     Log.d(TAG, "run: timeout: " + TimeoutCalculator.setTimeout(packetQueue.size()));
 
                     refreshHandler.postDelayed(this, 30000); // 30 seconds
@@ -308,7 +301,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
         Log.d(TAG, "generateTelemetryPacket: UUID: " + UUID);
 
-        String token = "eyJhbGciOiJIUzI1NiJ9.eyJVU0lEIjoiOTkxYWYyYmIwMWZiNWQ5ZmJhNGYxMTNkNzcyNDIyYTg3NjEwMDIyYSIsInRzIjoxNTA1MTc2MjczfQ.l_15GWLZxr4j32C9AEob-W723kFuFtRky_8h09p3c3o";
+        String token = "eyJhbGciOiJIUzI1NiJ9.eyJVU0lEIjoiZjcwOWZjMWQ1YjdiZWM0NDdiM2RmYWQ3NzY1MzEwOGFhYzczYTJmYSIsInRzIjoxNTA1NDE1MjY4fQ.W9e3ANSiE75HR6smc00uFsDAfxCcdB8niEydUlFY_ZY";
 
         TelemetryPacket packet = new TelemetryPacket();
         TelemetryPacket.PayloadBean data = new TelemetryPacket.PayloadBean();
@@ -318,6 +311,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         packet.setMessageId(id);
         data.setAlt(alt);
         data.setLng(lng);
+        data.setLat(lat);
         data.setHAcc(acc);
         data.setCourse(course);
         data.setBatt(battery);
@@ -328,21 +322,18 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         Long tsLong = System.currentTimeMillis() / 1000;
         packet.setTs(tsLong);
 
-        Log.d(TAG, "generateTelemetryPacket: ts: " + tsLong);
-        if ( !packetQueue.isEmpty()) {
+        // Log.e(TAG, "generateTelemetryPacket: ts: " + tsLong);
+        if (!packetQueue.isEmpty()) {
             Log.d(TAG, "generateTelemetryPacket: queue peek ts: " + packetQueue.peek().getTs());
-
-
         }
 
-        if ( !packetQueue.isEmpty()) {
-            if ( packetQueue.peek().getTs() != tsLong ) {
+        if (!packetQueue.isEmpty()) {
+            if (packetQueue.peek().getTs() != tsLong) {
                 packetQueue.add(packet);
             }
         } else {
             packetQueue.add(packet);
         }
-
         packetMap.put(id, packet);
 
     }
@@ -355,13 +346,13 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         telemetryLoopBoolean = true;
 
         // ws://ec2-34-210-213-56.us-west-2.compute.amazonaws.com:8080
-
-        HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY); // request everything
+//
+//        HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
+//        logging.setLevel(HttpLoggingInterceptor.Level.BODY); // request everything
 
         Request request = new Request.Builder().cacheControl(new CacheControl.Builder().build()).url("wss://telemetry-gateway.gocopia.com:6436").build();
         WebSocketListener listener = new WebSocketListener();
-        OkHttpClient newClient = new OkHttpClient.Builder().retryOnConnectionFailure(true).readTimeout(3, TimeUnit.SECONDS).addInterceptor(logging).build();
+        OkHttpClient newClient = new OkHttpClient.Builder().retryOnConnectionFailure(true).readTimeout(3, TimeUnit.SECONDS).build();
         webSocket = newClient.newWebSocket(request, listener);
 
         // start reading location data
@@ -415,5 +406,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
 
         return level / (float) scale;
     }
+
+
 
 }
