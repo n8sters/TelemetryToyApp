@@ -9,5 +9,5 @@
     <string name="battery_plugged_ac">wall charging</string>
     <string name="Cancel">Cancel</string>
     <string name="open_location_settings">Open location settings</string>
-    <string name="gps_network_not_enabled">GPS not enabled</string>
+    <string name="gps_network_not_enabled">Location services are not currently enabled on your device. GPS data is required to use Copia Drive, please open Location Services and enable location data. Thank you!</string>
 </resources>

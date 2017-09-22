@@ -18,6 +18,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+
 
 /**
  * Created by:
@@ -37,6 +40,7 @@ public class MainActivity extends AppCompatActivity  {
     static TextView output;
     boolean startButtonClicked = false;
     Context context = this;
+
 
     @Override
     public void onCreate(@Nullable final Bundle savedInstanceState) {
@@ -73,7 +77,6 @@ public class MainActivity extends AppCompatActivity  {
                 }
             }
         });
-
 
         Log.e(TAG, "onCreate: online: " + isOnline() );
     }

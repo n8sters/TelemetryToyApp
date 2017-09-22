@@ -26,6 +26,9 @@ import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -33,6 +36,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.CacheControl;
@@ -82,6 +86,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     int timeout = 1000;
 
     String UUID = "6fab693e3db5a4b9";
+    private FusedLocationProviderClient mFusedLocationClient;
 
     @Override
     public void onLocationChanged(Location location) {
@@ -228,6 +233,8 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     @Override
     public void onCreate() {
         super.onCreate();
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
         context = getApplicationContext();
         Log.e(TAG, "onCreate: created!");
         refreshLoop();
@@ -255,6 +262,7 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
         // trigger first time
         handler.post(runnable);
     }
+
 
     int count = 0;
     Handler refreshHandler = new Handler();
