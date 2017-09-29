@@ -1,6 +1,7 @@
 package com.example.natepowers.telemetrytoyapp;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
 import android.content.Context;
@@ -28,7 +29,9 @@ import android.util.Log;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.nearby.messages.Distance;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -99,6 +102,9 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
             alt = Double.parseDouble(tel.getAltutude(location));
             acc = tel.getAccuracy(location);
             course = location.getBearing();
+
+            CurrentLocationSingleton.setLat(lat);
+            CurrentLocationSingleton.setLng(lng);
 
             Log.e(TAG, "onCreate: bearing: " + location.getBearing());
             Log.e(TAG, "doAThing: acc: " + tel.getAccuracy(location));
@@ -234,7 +240,6 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
     public void onCreate() {
         super.onCreate();
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
         context = getApplicationContext();
         Log.e(TAG, "onCreate: created!");
         refreshLoop();
@@ -385,8 +390,10 @@ class TelemetrySingleton extends Application implements LocationListener, Sensor
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0.0001f, this);
         Criteria criteria = new Criteria();
+        criteria.setAccuracy(Criteria.ACCURACY_HIGH);
         String bestProvider = locationManager.getBestProvider(criteria, false);
         android.location.Location location = locationManager.getLastKnownLocation(bestProvider);
 

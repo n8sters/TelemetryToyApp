@@ -6,10 +6,13 @@ import android.content.Intent;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.EventLogTags;
@@ -20,6 +23,7 @@ import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.gson.Gson;
 
 
 /**
@@ -32,7 +36,7 @@ import com.google.android.gms.location.LocationServices;
  * ~~~~~~~~~~~~~~~~~~~  at Copia PBC   ~~~~~~~
  */
 
-public class MainActivity extends AppCompatActivity  {
+public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
 
@@ -71,6 +75,7 @@ public class MainActivity extends AppCompatActivity  {
                 } else {
                     TelemetrySingleton single = TelemetrySingleton.getInstance();
                     single.start();
+                    refreshLoop();
                     start.setText("STOP");
                     startButtonClicked = true;
                     Log.e(TAG, "onClick: start clicked, boolean: " + startButtonClicked);
@@ -78,30 +83,34 @@ public class MainActivity extends AppCompatActivity  {
             }
         });
 
-        Log.e(TAG, "onCreate: online: " + isOnline() );
+        Log.e(TAG, "onCreate: online: " + isOnline());
     }
 
+    int timeout = 1000;
+
     public void showLocationDialog(final Context context) {
-        LocationManager lm = (LocationManager)context.getSystemService(Context.LOCATION_SERVICE);
+        LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         boolean gps_enabled = false;
         boolean network_enabled = false;
 
         try {
             gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        } catch(Exception ex) {}
+        } catch (Exception ex) {
+        }
 
         try {
             network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        } catch(Exception ex) {}
+        } catch (Exception ex) {
+        }
 
-        if(!gps_enabled && !network_enabled) {
+        if (!gps_enabled && !network_enabled) {
             // notify user
             android.app.AlertDialog.Builder dialog = new android.app.AlertDialog.Builder(context);
             dialog.setMessage(context.getResources().getString(R.string.gps_network_not_enabled));
             dialog.setPositiveButton(context.getResources().getString(R.string.open_location_settings), new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface paramDialogInterface, int paramInt) {
-                    Intent myIntent = new Intent( Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    Intent myIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
                     context.startActivity(myIntent);
                     //get gps
                 }
@@ -118,7 +127,7 @@ public class MainActivity extends AppCompatActivity  {
         }
     }
 
-    public  static boolean returnOnline() {
+    public static boolean returnOnline() {
         return online;
     }
 
@@ -136,11 +145,34 @@ public class MainActivity extends AppCompatActivity  {
         if (networkInfo != null && networkInfo.isConnected()) {
             isAvailable = true;
         }
-        Log.e(TAG, "isOnline: online: " + isAvailable );
+        Log.e(TAG, "isOnline: online: " + isAvailable);
         online = isAvailable;
         return isAvailable;
     }
 
+
+    int count = 0;
+    Handler refreshHandler = new Handler();
+
+    public void refreshLoop() {
+
+        final Runnable runnable = new Runnable() {
+            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+            public void run() {
+
+                if (count++ < 10000) {
+                    refreshHandler.postDelayed(this, 100); // 0.10 seconds
+
+
+                    output.setText("Lat: " + CurrentLocationSingleton.getLat() + "        "
+                            + "Lng: " +CurrentLocationSingleton.getLng());
+                }
+            }
+        };
+
+        // trigger first time
+        refreshHandler.post(runnable);
+    }
 
 
 }
